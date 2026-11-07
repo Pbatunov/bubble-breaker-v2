@@ -1,4 +1,15 @@
+/**
+ * Частица взрыва пузыря: летит по баллистической траектории, гаснет и исчезает.
+ */
 export class ExplosionParticle {
+    /**
+     * @param {number} x - начальная координата X
+     * @param {number} y - начальная координата Y
+     * @param {string} color - цвет частицы (CSS-цвет)
+     * @param {number} radius - радиус частицы в пикселях
+     * @param {number} [dx] - начальная скорость по X; если не задана, выбирается случайно
+     * @param {number} [dy] - начальная скорость по Y; если не задана, выбирается случайно
+     */
     constructor(x, y, color, radius, dx, dy) {
         this.x = x;
         this.y = y;
@@ -13,6 +24,9 @@ export class ExplosionParticle {
         this.friction = 1; // замедление
     }
 
+    /**
+     * Сдвигает частицу на один кадр и уменьшает прозрачность.
+     */
     update() {
         this.x += this.dx;
         this.y += this.dy;
@@ -22,6 +36,10 @@ export class ExplosionParticle {
         this.alpha -= 0.02;
     }
 
+    /**
+     * Рисует частицу в текущей позиции.
+     * @param {CanvasRenderingContext2D} ctx
+     */
     draw(ctx) {
         ctx.save();
         ctx.globalAlpha = this.alpha;
@@ -32,6 +50,9 @@ export class ExplosionParticle {
         ctx.restore();
     }
 
+    /**
+     * @returns {boolean} true, пока частица видима
+     */
     isActive() {
         return this.alpha > 0;
     }

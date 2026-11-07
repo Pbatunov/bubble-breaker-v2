@@ -1,4 +1,14 @@
+/**
+ * Отрисовка кадра: вызывает анимацию, обновляет взрывы и рисует все пузыри.
+ */
 export class Renderer {
+    /**
+     * @param {Object} params
+     * @param {HTMLCanvasElement} params.canvas - канвас для отрисовки
+     * @param {GameState} params.state - состояние игры
+     * @param {AnimationController} params.animation - контроллер движения
+     * @param {() => void} [params.onAnimationStop] - вызывается, когда анимация только что завершилась
+     */
     constructor({ canvas, state, animation, onAnimationStop }) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
@@ -9,6 +19,9 @@ export class Renderer {
         this.wasAnimating = false;
     }
 
+    /**
+     * Один кадр: обновляет анимацию и перерисовывает все пузыри.
+     */
     render() {
         const { ctx } = this;
 

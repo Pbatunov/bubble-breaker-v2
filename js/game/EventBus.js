@@ -1,9 +1,17 @@
+/**
+ * Простая шина событий: подписка, отписка и синхронная рассылка.
+ */
 export class EventBus {
     constructor() {
         this.listeners = new Map(); // Map<eventName, Set<callback>>
     }
 
-    // Подписаться на событие
+    /**
+     * Подписаться на событие.
+     * @param {string} eventName
+     * @param {(payload: any) => void} callback
+     * @returns {() => void} функция для отписки
+     */
     on(eventName, callback) {
         if (!this.listeners.has(eventName)) {
             this.listeners.set(eventName, new Set());
@@ -13,7 +21,11 @@ export class EventBus {
         return () => this.off(eventName, callback);
     }
 
-    // Отписаться от события
+    /**
+     * Отписаться от события.
+     * @param {string} eventName
+     * @param {(payload: any) => void} callback - та же функция, что передавалась в on()
+     */
     off(eventName, callback) {
         const set = this.listeners.get(eventName);
         if (set) {
@@ -24,7 +36,11 @@ export class EventBus {
         }
     }
 
-    // Вызвать событие (синхронно)
+    /**
+     * Вызвать событие синхронно. Ошибка в одном обработчике не мешает остальным.
+     * @param {string} eventName
+     * @param {any} [payload=null] - данные, передаваемые обработчикам
+     */
     emit(eventName, payload = null) {
         const callbacks = this.listeners.get(eventName);
         if (!callbacks) return;

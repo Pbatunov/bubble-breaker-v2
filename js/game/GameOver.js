@@ -1,7 +1,17 @@
 import {Popup} from "../ui/Popup/Popup.js";
 import {getLevelTarget, getLeftoverBonus} from "./LevelRules.js";
 
+/**
+ * Конец уровня: подсчёт итога, перенос очков и попап с результатом.
+ */
 export class GameOver {
+    /**
+     * @param {Object} params
+     * @param {HTMLCanvasElement} params.canvas - канвас, относительно которого показывается попап
+     * @param {() => void} [params.destroy] - вызывается перед перезапуском (очистка игры)
+     * @param {*} params.gameContext - значение this для destroy и reInit
+     * @param {() => void} params.reInit - перезапуск игры после закрытия попапа
+     */
     constructor({canvas, destroy, gameContext, reInit}) {
         this.canvas = canvas;
         this.destroy = destroy;
@@ -35,6 +45,7 @@ export class GameOver {
     }
 
     /**
+     * Показывает попап с итогом уровня. По закрытию перезапускает игру.
      * @param {{level, won, total, target, remaining, bonus, carry}} result - итог уровня из resolve()
      */
     start(result) {
@@ -58,6 +69,11 @@ export class GameOver {
         popup.show();
     }
 
+    /**
+     * Строки текста для попапа.
+     * @param {{level, won, total, target, remaining, bonus, carry}} result - итог уровня из resolve()
+     * @returns {string[]}
+     */
     buildText(result) {
         const lines = [];
 

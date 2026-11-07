@@ -1,7 +1,13 @@
 export class Popup {
     /**
-     * @param {HTMLElement} [anchor] - элемент, относительно которого попап центрируется и подгоняется по размеру
-       @param {HTMLElement} [container] - HTML-элемент в который вставляется popup
+     * Модальное окно поверх игры с текстом и кнопкой.
+     * @param {Object} params
+     * @param {HTMLElement} [params.container=document.body] - элемент, в который вставляется попап
+     * @param {string|string[]} [params.textContent] - строка или массив строк (каждая — отдельный абзац)
+     * @param {string} [params.buttonText='Сначала!'] - текст кнопки
+     * @param {HTMLElement} [params.anchor] - элемент, относительно которого попап центрируется и подгоняется по размеру
+     * @param {() => void} [params.onShow] - вызывается после показа
+     * @param {() => void} [params.onClose] - вызывается по нажатию кнопки
      */
     constructor({container = document.body, textContent, buttonText, anchor, onShow, onClose}) {
         this.container = container;

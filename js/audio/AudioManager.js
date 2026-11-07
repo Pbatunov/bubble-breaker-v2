@@ -1,3 +1,6 @@
+/**
+ * Загрузка и воспроизведение звуков через Web Audio API.
+ */
 export class AudioManager {
     constructor() {
         this.audioContext = null;
@@ -6,14 +9,22 @@ export class AudioManager {
         this.isInitialized = false;
     }
 
-    // Инициализация AudioContext (обязательно после клика пользователя)
+    /**
+     * Инициализация AudioContext (обязательно после клика пользователя).
+     */
     init() {
         if (this.isInitialized) return;
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         this.isInitialized = true;
     }
 
-    // Загрузка звука по пути
+    /**
+     * Загрузка звука по пути. Без вызова init() ничего не делает.
+     * @param {string} id - имя, под которым звук будет доступен в play()
+     * @param {string} path - путь к аудиофайлу
+     * @returns {Promise<void>}
+     * @throws {Error} если файл не удалось загрузить
+     */
     async loadSound(id, path) {
         if (!this.audioContext) {
             console.warn('AudioManager не инициализирован. Вызовите init() после клика.');
@@ -27,7 +38,11 @@ export class AudioManager {
         this.sounds.set(id, audioBuffer);
     }
 
-    // Воспроизведение звука
+    /**
+     * Воспроизведение звука. Тихо пропускается, если звук не загружен.
+     * @param {string} id - имя звука, переданное в loadSound()
+     * @param {number} [volume=1.0] - громкость от 0 до 1 (с учётом masterVolume)
+     */
     play(id, volume = 1.0) {
         if (!this.isInitialized || !this.sounds.has(id)) return;
 
@@ -44,6 +59,10 @@ export class AudioManager {
         source.start();
     }
 
+    /**
+     * Общая громкость для всех звуков.
+     * @param {number} volume - значение от 0 до 1 (выходит за границы — обрезается)
+     */
     setMasterVolume(volume) {
         this.masterVolume = Math.max(0, Math.min(1, volume));
     }

@@ -2,6 +2,8 @@
 
 export const FIRST_LEVEL_TARGET = 1000;
 export const TARGET_STEP = 500;
+export const FIRST_LEVEL_POINTS_PER_BUBBLE = 15;
+export const POINTS_PER_BUBBLE_STEP = 2;
 
 /**
  * Цель уровня: на первом 1000, далее +500 за каждый уровень.
@@ -9,6 +11,14 @@ export const TARGET_STEP = 500;
  */
 export function getLevelTarget(level) {
     return FIRST_LEVEL_TARGET + TARGET_STEP * (level - 1);
+}
+
+/**
+ * Очки за один пузырь в группе: на первом уровне 15, далее +2 за каждый уровень.
+ * @param {number} level - номер уровня, начиная с 1
+ */
+export function getPointsPerBubble(level) {
+    return FIRST_LEVEL_POINTS_PER_BUBBLE + POINTS_PER_BUBBLE_STEP * (level - 1);
 }
 
 /**

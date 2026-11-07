@@ -8,7 +8,18 @@ const types =
         [1,3,4,4],
     ]
 
+/**
+ * Создаёт пузыри и заполняет ими всё поле в начале уровня.
+ */
 export class BubbleFactory {
+    /**
+     * @param {Object} params
+     * @param {Grid} params.grid - геометрия поля (координаты ячеек)
+     * @param {GameState} params.state - состояние игры, в которое добавляются пузыри
+     * @param {{rows: number, columns: number}} params.config - размеры поля
+     * @param {Object<string, string>} params.colors - палитра: имя цвета -> CSS-цвет
+     * @param {AudioManager} params.audioManager - менеджер звука для пузырей
+     */
     constructor({ grid, state, config, colors, audioManager }) {
         this.grid = grid;
         this.state = state;
@@ -19,6 +30,9 @@ export class BubbleFactory {
         this.audioManager = audioManager;
     }
 
+    /**
+     * Создаёт пузыри со случайными цветами и добавляет их в state.bubbles.
+     */
     create() {
         const { rows, columns } = this.config;
 

@@ -11,11 +11,22 @@ import {AudioManager} from '../audio/AudioManager.js';
 import {ScoreManager} from '../utils/ScoreManager.js';
 import {EventBus} from './EventBus.js';
 import {GameOver} from './GameOver.js';
-import {getLevelTarget} from './LevelRules.js';
+import {getLevelTarget, getPointsPerBubble} from './LevelRules.js';
 
 const POP_INTERVAL_MS = 60; // пауза между лопающимися оставшимися пузырями в конце уровня
 
+/**
+ * Главный контроллер игры: создаёт подсистемы, обрабатывает клики, ведёт уровни
+ * и запускает игровой цикл. Все подсистемы пересоздаются при каждом старте уровня в reset().
+ */
 export class BubbleGame {
+    /**
+     * @param {HTMLCanvasElement} canvas - игровой канвас (обязателен)
+     * @param {Object} [options]
+     * @param {{rows: number, columns: number, speed: number}} [options.config=CONFIG] - настройки поля
+     * @param {Object<string, string>} [options.colors=COLORS] - палитра пузырей
+     * @throws {Error} если canvas не передан
+     */
     constructor(canvas, {config = CONFIG, colors = COLORS} = {}) {
         if (!canvas) {
             throw new Error('BubbleGame: canvas не найден.');
@@ -50,6 +61,9 @@ export class BubbleGame {
         });
     }
 
+    /**
+     * Создаёт все подсистемы уровня заново. Счёт стартует с переноса предыдущего уровня.
+     */
     reset() {
         this.events = new EventBus();
         this.state = new GameState();
@@ -57,7 +71,7 @@ export class BubbleGame {
         this.grid = new Grid({canvas: this.canvas, state: this.state, config: this.config});
 
         this.audioManager = new AudioManager();
-        this.scoreManager = new ScoreManager(this.carryOver);
+        this.scoreManager = new ScoreManager(this.carryOver, getPointsPerBubble(this.level));
         this.targetReached = false;
         this.levelFinished = false;
 
@@ -93,6 +107,9 @@ export class BubbleGame {
         this._subscriptions = [];
     }
 
+    /**
+     * Подписывает канвас на клики и внутренние события игры.
+     */
     setupEventHandlers() {
         // Обработка клика по канвасу (ввод)
         this.canvas.addEventListener('mousedown', () => this.initAudio(), {once: true});
@@ -112,6 +129,9 @@ export class BubbleGame {
         this._subscriptions.push(gameOverUnsub);
     }
 
+    /**
+     * Обновляет текст в HUD: уровень, отображаемый счёт и цель.
+     */
     updateScoreDisplay() {
         if (this.scoreElement) {
             const target = getLevelTarget(this.level);
@@ -120,6 +140,11 @@ export class BubbleGame {
         }
     }
 
+    /**
+     * Начисляет очки за лопнувшую группу, показывает баннер при достижении цели и мигает счётом.
+     * @param {number} count - количество пузырей в группе
+     * @returns {number} начисленные очки
+     */
     awardPointsForGroup(count) {
         // Очки сразу уходят в целевой счёт; отображаемый счёт догонит их в loop()
         const points = this.scoreManager.addGroup(count);
@@ -138,6 +163,10 @@ export class BubbleGame {
         return points;
     }
 
+    /**
+     * Запускает уровень: применяет ожидающий переход на следующий уровень,
+     * создаёт поле и запускает игровой цикл.
+     */
     init() {
         // Останавливаем цикл, запущенный до перезапуска, чтобы не было нескольких параллельных loop
         if (this.animationFrame) {
@@ -153,6 +182,10 @@ export class BubbleGame {
         this.loop(this.lastTime);
     }
 
+    /**
+     * Переводит игру на уровень и перенос очков, подготовленные в finishLevel().
+     * Ничего не делает, если перехода нет.
+     */
     applyPendingLevel() {
         if (this.pendingLevel === null) return;
 
@@ -161,6 +194,10 @@ export class BubbleGame {
         this.pendingLevel = null;
     }
 
+    /**
+     * Создаёт AudioContext и загружает звук лопания. Вызывается при первом нажатии мыши.
+     * @returns {Promise<void>}
+     */
     async initAudio() {
         this.audioManager.init(); // Создает AudioContext
 
@@ -171,6 +208,9 @@ export class BubbleGame {
         }
     }
 
+    /**
+     * Останавливает цикл, таймеры и снимает обработчики событий.
+     */
     destroy() {
         this.canvas.removeEventListener('click', this.handleClick);
 
@@ -188,6 +228,10 @@ export class BubbleGame {
         this._subscriptions = [];
     }
 
+    /**
+     * Обработчик клика: лопает группу под курсором, пересчитывает падение и начисляет очки.
+     * @param {MouseEvent} event
+     */
     handleClick(event) {
         if (this.state.isAnimating) return;
 
@@ -219,6 +263,10 @@ export class BubbleGame {
         this.showFloatingPoints(event.offsetX, event.offsetY, points);
     }
 
+    /**
+     * Показывает крупную надпись по центру экрана на 1.5 секунды.
+     * @param {string} text
+     */
     showLevelBanner(text) {
         const el = document.createElement('div');
         el.className = 'floating-points';
@@ -236,6 +284,10 @@ export class BubbleGame {
         setTimeout(() => el.remove(), 1500);
     }
 
+    /**
+     * Проигрывает звуки лопания с задержкой между пузырями.
+     * @param {Array<Bubble>} bubblesToPop
+     */
     playCollapseSounds(bubblesToPop) {
         const delay = 50; // Задержка между звуками (мс)
 
@@ -249,6 +301,12 @@ export class BubbleGame {
         });
     }
 
+    /**
+     * Показывает всплывающее «+N» над местом клика, которое плавно гаснет.
+     * @param {number} x - координата X относительно канваса
+     * @param {number} y - координата Y относительно канваса
+     * @param {number} points - число для показа
+     */
     showFloatingPoints(x, y, points) {
         const el = document.createElement('div');
         el.className = 'floating-points';
@@ -271,6 +329,10 @@ export class BubbleGame {
         }, 50);
     }
 
+    /**
+     * Вызывается после окончания анимации: убирает лопнувшие пузыри, сбрасывает цели
+     * и проверяет конец уровня.
+     */
     finishAnimation() {
         const {bubbles} = this.state;
         const {columns, rows} = this.config;
@@ -295,6 +357,9 @@ export class BubbleGame {
         this.events.emit('stopAnimation');
     }
 
+    /**
+     * Уровень заканчивается, когда нет ни групп, ни движения, ни взрывов.
+     */
     checkGameOver() {
         if (this.levelFinished) return;
 
@@ -349,6 +414,10 @@ export class BubbleGame {
         }, POP_INTERVAL_MS);
     }
 
+    /**
+     * Игровой цикл (requestAnimationFrame): обновляет счёт, анимацию и отрисовку.
+     * @param {number} currentTime - время кадра в мс (из requestAnimationFrame)
+     */
     loop(currentTime) {
         // 1. Считаем время, прошедшее с прошлого кадра (deltaTime)
         const deltaTime = currentTime - this.lastTime;

@@ -1,12 +1,16 @@
+/**
+ * Счёт уровня: начисляет очки за группы и бонусы и плавно показывает их на экране.
+ */
 export class ScoreManager {
     /**
      * @param {number} startScore - стартовый счёт (остаток с предыдущего уровня)
+     * @param {number} scoresForOneBubble - очки за один пузырь в группе (зависит от уровня)
      */
-    constructor(startScore = 0) {
+    constructor(startScore = 0, scoresForOneBubble = 15) {
         this.score = startScore;
         this.displayScore = startScore;
         this.speed = 300;
-        this.scoresForOneBubble = 15;
+        this.scoresForOneBubble = scoresForOneBubble;
     }
 
     /**
@@ -40,6 +44,10 @@ export class ScoreManager {
         return points;
     }
 
+    /**
+     * Реальный счёт (без анимации).
+     * @returns {number}
+     */
     getScore() {
         return this.score;
     }
@@ -72,6 +80,10 @@ export class ScoreManager {
         return true; // Анимация продолжается
     }
 
+    /**
+     * Отображаемый счёт, который догоняет реальный (целое число для вывода на экран).
+     * @returns {number}
+     */
     getCurrentDisplayScore() {
         return Math.floor(this.displayScore);
     }

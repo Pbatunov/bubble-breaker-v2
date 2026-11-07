@@ -1,14 +1,34 @@
+/**
+ * Вычисляет, куда должны упасть или сдвинуться пузыри после лопания группы.
+ * Сначала считается вертикальное падение, и только если оно не нужно,
+ * — горизонтальный сдвиг колонок влево.
+ */
 export class CollapseCalculator {
+    /**
+     * @param {Object} params
+     * @param {GameState} params.state - состояние игры (сюда пишутся цели движения)
+     * @param {Grid} params.grid - геометрия поля
+     * @param {{rows: number, columns: number}} params.config - размеры поля
+     */
     constructor({ state, grid, config }) {
         this.state = state;
         this.grid = grid;
         this.config = config;
     }
 
+    /**
+     * Очищает все цели движения перед новым расчётом.
+     */
     reset() {
         this.state.resetTargets();
     }
 
+    /**
+     * Рассчитывает падение и сдвиг пузырей после лопания.
+     * @param {Array<Bubble>} checkedBubbles - лопнувшие пузыри
+     * @returns {{fallingBubbles: Array<Bubble>, collapseBubbles: Array<Bubble>}}
+     *          падающие по вертикали и сдвигающиеся по горизонтали пузыри
+     */
     calculate(checkedBubbles) {
         const fallingBubbles = [];
         const collapseBubbles = [];
@@ -22,6 +42,11 @@ export class CollapseCalculator {
         return { fallingBubbles, collapseBubbles };
     }
 
+    /**
+     * Записывает цели падения для пузырей, под которыми есть лопнувшие.
+     * @param {Array<Bubble>} checkedBubbles - лопнувшие пузыри
+     * @param {Array<Bubble>} fallingBubbles - сюда добавляются падающие пузыри
+     */
     calculateVerticalTargets(checkedBubbles, fallingBubbles) {
         const { bubbles } = this.state;
         const { columns, rows } = this.config;
@@ -72,6 +97,10 @@ export class CollapseCalculator {
         });
     }
 
+    /**
+     * Записывает цели сдвига влево для колонок правее полностью пустых колонок.
+     * @param {Array<Bubble>} collapseBubbles - сюда добавляются сдвигаемые пузыри
+     */
     calculateHorizontalTargets(collapseBubbles) {
         const { bubbles } = this.state;
         const { columns, rows } = this.config;

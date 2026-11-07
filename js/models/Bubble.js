@@ -1,8 +1,25 @@
 import {ExplosionParticle} from './ExplosionParticle.js'
 import {CONFIG} from '../config.js'
 
-
+/**
+ * Пузырь на поле: позиция, цвет, состояние (лопнул, взрывается, мёртв) и отрисовка.
+ */
 export class Bubble {
+    /**
+     * @param {Object} params
+     * @param {number} params.x - координата центра по X
+     * @param {number} params.y - координата центра по Y
+     * @param {number} params.radius - радиус пузыря
+     * @param {string} params.fillColor - CSS-цвет заливки (он же цвет частиц взрыва)
+     * @param {number} params.type - номер цвета (для поиска групп)
+     * @param {number} params.index - индекс в сетке
+     * @param {number} params.row - строка в сетке
+     * @param {number} params.column - колонка в сетке
+     * @param {string} params.imagePath - путь к SVG-картинке пузыря
+     * @param {CanvasRenderingContext2D} params.ctx - контекст канваса
+     * @param {{strokeColor: string, strokeWidth: number, textFontSize: number, columns: number, rows: number}} params.config - настройки
+     * @param {AudioManager} [params.audioManager] - менеджер звука для взрыва
+     */
     constructor({
                     x,
                     y,
@@ -27,6 +44,7 @@ export class Bubble {
         this.row = row;
         this.column = column;
 
+        /** Помечен ли пузырь для лопания в текущем ходе. */
         this.checked = false;
 
         this.strokeColor = config.strokeColor;
@@ -48,22 +66,29 @@ export class Bubble {
         this.updateGridFlags();
     }
 
+    /** @returns {number} левый край пузыря */
     get left() {
         return this.x - this.radius;
     }
 
+    /** @returns {number} правый край пузыря */
     get right() {
         return this.x + this.radius;
     }
 
+    /** @returns {number} верхний край пузыря */
     get top() {
         return this.y - this.radius;
     }
 
+    /** @returns {number} нижний край пузыря */
     get bottom() {
         return this.y + this.radius;
     }
 
+    /**
+     * Пересчитывает флаги «первый/последний в строке и колонке».
+     */
     updateGridFlags() {
         this.firstInRow = this.column === 0;
         this.lastInRow = this.column === this.config.columns - 1;
@@ -71,11 +96,20 @@ export class Bubble {
         this.lastInColumn = this.row === this.config.rows - 1;
     }
 
+    /**
+     * Устанавливает координаты центра пузыря (без пересчёта сетки).
+     * @param {number} x
+     * @param {number} y
+     */
     setPosition(x, y) {
         this.x = x;
         this.y = y;
     }
 
+    /**
+     * Пересчитывает row, column и index по текущим координатам.
+     * @param {number} cellSize - размер ячейки сетки в пикселях
+     */
     updateGridPosition(cellSize) {
         this.column = Math.floor(this.x / cellSize);
         this.row = Math.floor(this.y / cellSize);
@@ -83,6 +117,9 @@ export class Bubble {
         this.updateGridFlags();
     }
 
+    /**
+     * Запускает взрыв: создаёт частицы цвета пузыря.
+     */
     startExplosion() {
         this.isExploding = true;
         this.explosionParticles = [];
@@ -105,6 +142,9 @@ export class Bubble {
         }
     }
 
+    /**
+     * Один кадр взрыва. Когда частицы закончились, пузырь помечается как мёртвый.
+     */
     updateExplosion() {
         if (!this.isExploding) return;
 
@@ -124,6 +164,9 @@ export class Bubble {
         }
     }
 
+    /**
+     * Проигрывает звук лопания, если он ещё не проигрывался.
+     */
     playSound() {
         if (this.audioManager) {
             this.audioManager.play('pop', 0.7); // Чуть тише, чтобы при серии было приятно
@@ -131,7 +174,10 @@ export class Bubble {
         }
     }
 
-    // В Bubble.js
+    /**
+     * Рисует пузырь: SVG-картинку, а если её нет — круг, плюс текст. Во время взрыва рисует частицы.
+     * @param {CanvasRenderingContext2D} ctx
+     */
     draw(ctx) {
         if (!ctx) return;
 
