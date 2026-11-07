@@ -40,11 +40,40 @@ body {
     display: flex;
     align-self: center;
     justify-content: center;
-    width: 900px;
-    height: 900px;
+    width: 600px;
+    height: 600px;
     background-color: #222;
 }
 
+.popup {
+    font-family: Calibri, Helvetica, sans-serif;
+    font-size: 48px;
+    font-weight: bold;
+    color: #222;
+    line-height: 1.2;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 32px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+
+    .popup__button {
+        display: block;
+        font-size: 24px;
+        border: none;
+        outline: none;
+        background: darkmagenta;
+        color: #fff;
+        padding: 12px;
+        border-radius: 16px;
+        margin: 32px auto 0;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+}
 
 .score-display.highlight {
     animation: pulse 0.4s ease-in-out;
@@ -54,4 +83,11 @@ body {
     0% { transform: scale(1); }
     50% { transform: scale(1.08); }
     100% { transform: scale(1); }
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .popup__button:hover {
+        transform: scale(1.1);
+        filter: drop-shadow(0px 1px 4px rgba(0, 0, 0, 0.2));
+    }
 }

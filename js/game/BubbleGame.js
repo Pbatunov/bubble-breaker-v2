@@ -10,6 +10,7 @@ import {Renderer} from './Renderer.js';
 import {AudioManager} from '../audio/AudioManager.js';
 import {ScoreManager} from '../utils/ScoreManager.js';
 import {EventBus} from './EventBus.js';
+import {GameOver} from './GameOver.js';
 
 export class BubbleGame {
     constructor(canvas, {config = CONFIG, colors = COLORS} = {}) {
@@ -21,26 +22,43 @@ export class BubbleGame {
 
         this.canvas = canvas;
         this.config = config;
+        this.colors = colors;
 
         canvas.width = canvas.clientWidth;
         canvas.height = canvas.clientHeight;
 
+        //this.reset();
+        this.lastTime = performance.now();
+        this.animationFrame = null;
+
+        this.gameOver = new GameOver({
+            state: this.state,
+            grid: this.grid,
+            scoreElement: this.scoreElement,
+            popup: this.popup,
+            destroy: this.destroy,
+            gameContext: this,
+            reInit: this.init,
+        });
+    }
+
+    reset() {
         this.events = new EventBus();
         this.state = new GameState();
 
-        this.grid = new Grid({canvas, state: this.state, config});
+        this.grid = new Grid({canvas: this.canvas, state: this.state, config: this.config});
 
         this.audioManager = new AudioManager();
         this.scoreManager = new ScoreManager();
 
         this.factory = new BubbleFactory({
-            grid: this.grid, state: this.state, config, colors, audioManager: this.audioManager,
+            grid: this.grid, state: this.state, config: this.config, colors: this.colors, audioManager: this.audioManager,
         });
 
         this.groups = new GroupFinder({state: this.state, grid: this.grid});
 
         this.collapse = new CollapseCalculator({
-            state: this.state, grid: this.grid, config,
+            state: this.state, grid: this.grid, config: this.config
         });
 
         this.movement = new MovementPlanner({
@@ -50,19 +68,13 @@ export class BubbleGame {
         this.animation = new AnimationController({
             state: this.state,
             movementPlanner: this.movement,
-            speed: config.speed,
+            speed: this.config.speed,
         });
 
         this.renderer = new Renderer({
-            canvas, state: this.state, animation: this.animation,
+            canvas: this.canvas, state: this.state, animation: this.animation,
             onAnimationStop: () => this.finishAnimation(),
         });
-
-        this.lastTime = performance.now();
-        this.animationFrame = null;
-        this.scoreAnimationId = null;
-        this.scoreAnimationStep = 5; // сколько очков добавлять за шаг (можно менять)
-        this.scoreAnimationInterval = 15; // мс между шагами
 
         this.handleClick = this.handleClick.bind(this);
         this.loop = this.loop.bind(this);
@@ -84,7 +96,7 @@ export class BubbleGame {
         this._subscriptions.push(stopAnimUnsub);
 
         const gameOverUnsub = this.events.on('gameOver', () => {
-            alert('Game Over!');
+            this.gameOver.start()
         });
 
         this._subscriptions.push(gameOverUnsub);
@@ -97,13 +109,8 @@ export class BubbleGame {
     }
 
     awardPointsForGroup(count) {
+        // Очки сразу уходят в целевой счёт; отображаемый счёт догонит их в loop()
         const points = this.scoreManager.addGroup(count);
-
-        // Если анимация уже идёт — просто добавили к целевому счёту, она догонит сама.
-        // Если нет — запускаем новую анимацию.
-        if (!this.scoreAnimationId) {
-            this.startScoreAnimation();
-        }
 
         // Мигание
         if (this.scoreElement) {
@@ -114,26 +121,13 @@ export class BubbleGame {
         return points;
     }
 
-    startScoreAnimation() {
-        // Останавливаем предыдущую, если была (на всякий случай)
-        if (this.scoreAnimationId) cancelAnimationFrame(this.scoreAnimationId);
-
-        const animate = () => {
-            const isRunning = true;
-            this.updateScoreDisplay();
-
-            if (isRunning) {
-                this.scoreAnimationId = setTimeout(animate, this.scoreAnimationInterval);
-            } else {
-                this.scoreAnimationId = null; // анимация завершена
-            }
-        };
-
-        animate();
-    }
-
-
     init() {
+        // Останавливаем цикл, запущенный до перезапуска, чтобы не было нескольких параллельных loop
+        if (this.animationFrame) {
+            cancelAnimationFrame(this.animationFrame);
+        }
+
+        this.reset();
         this.factory.create();
         this.grid.saveCoordinates();
         this.setupEventHandlers();
@@ -156,11 +150,6 @@ export class BubbleGame {
 
         if (this.animationFrame) {
             cancelAnimationFrame(this.animationFrame);
-        }
-
-        if (this.scoreAnimationId) {
-            clearTimeout(this.scoreAnimationId); // или cancelAnimationFrame, если используешь его
-            this.scoreAnimationId = null;
         }
 
         // Отписываемся от внутренних событий
@@ -195,16 +184,10 @@ export class BubbleGame {
         const remaining = this.state.bubbles.filter((b) => b).length;
         const isGameOver = remaining < 2 || !this.groups.hasGroups();
 
-        if (!fallingBubbles.length && !collapseBubbles.length && isGameOver) {
-            this.dispatchGameOver();
-            return;
-        }
-
         this.playCollapseSounds(checked);
 
         const points = this.awardPointsForGroup(checked.length);
 
-        console.log({points})
         this.showFloatingPoints(event.offsetX, event.offsetY, points);
     }
 
@@ -220,7 +203,6 @@ export class BubbleGame {
             }, index * delay);
         });
     }
-
 
     showFloatingPoints(x, y, points) {
         const el = document.createElement('div');

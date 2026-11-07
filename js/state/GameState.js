@@ -51,7 +51,7 @@ export class GameState {
     }
 
     get isAnimating() {
-        return this.moving.size > 0;
+        return this.moving.size > 0 || this.exploding.size > 0;
     }
 
     get hasFinishedAnimation() {

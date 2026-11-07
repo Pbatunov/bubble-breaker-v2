@@ -2,10 +2,10 @@ import { Bubble } from '../models/Bubble.js';
 
 const types =
     [
-        [3,2,4,2],
-        [3,2,4,2],
-        [3,2,4,2],
-        [3,3,4,2],
+        [3,2,4,4],
+        [3,2,4,4],
+        [3,2,4,4],
+        [1,3,4,4],
     ]
 
 export class BubbleFactory {

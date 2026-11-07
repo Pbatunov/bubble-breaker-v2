@@ -1,6 +1,6 @@
 export const CONFIG = {
-    rows: 10 ,
-    columns: 10 ,
+    rows: 10,
+    columns: 10,
     speed: 10,
     strokeColor: '#222',
     strokeWidth: 2,
