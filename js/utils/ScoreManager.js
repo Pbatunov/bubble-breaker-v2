@@ -1,14 +1,21 @@
 export class ScoreManager {
-    constructor() {
-        this.score = 0;
-        this.displayScore = 0;
+    /**
+     * @param {number} startScore - стартовый счёт (остаток с предыдущего уровня)
+     */
+    constructor(startScore = 0) {
+        this.score = startScore;
+        this.displayScore = startScore;
         this.speed = 300;
         this.scoresForOneBubble = 15;
     }
 
-    reset() {
-        this.score = 0;
-        this.displayScore = 0;
+    /**
+     * Добавляет бонус в конце уровня сразу в целевой счёт.
+     * @param {number} points
+     */
+    addBonus(points) {
+        this.score += points;
+        return points;
     }
 
     /**

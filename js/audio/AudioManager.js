@@ -21,7 +21,7 @@ export class AudioManager {
         }
 
         const response = await fetch(path);
-        if (!response.ok) throw new Error(`Не удалось загрузить звук: \${path}`);
+        if (!response.ok) throw new Error(`Не удалось загрузить звук: ${path}`);
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
         this.sounds.set(id, audioBuffer);

@@ -11,6 +11,9 @@ import {AudioManager} from '../audio/AudioManager.js';
 import {ScoreManager} from '../utils/ScoreManager.js';
 import {EventBus} from './EventBus.js';
 import {GameOver} from './GameOver.js';
+import {getLevelTarget} from './LevelRules.js';
+
+const POP_INTERVAL_MS = 60; // пауза между лопающимися оставшимися пузырями в конце уровня
 
 export class BubbleGame {
     constructor(canvas, {config = CONFIG, colors = COLORS} = {}) {
@@ -31,11 +34,16 @@ export class BubbleGame {
         this.lastTime = performance.now();
         this.animationFrame = null;
 
+        // Прогресс между уровнями: сохраняется при переходе, сбрасывается при проигрыше
+        this.level = 1;
+        this.carryOver = 0;
+        // Следующий уровень применяется только после закрытия попапа (в init)
+        this.pendingLevel = null;
+        this.pendingCarry = 0;
+        this.popTimer = null;
+
         this.gameOver = new GameOver({
-            state: this.state,
-            grid: this.grid,
-            scoreElement: this.scoreElement,
-            popup: this.popup,
+            canvas: this.canvas,
             destroy: this.destroy,
             gameContext: this,
             reInit: this.init,
@@ -49,7 +57,9 @@ export class BubbleGame {
         this.grid = new Grid({canvas: this.canvas, state: this.state, config: this.config});
 
         this.audioManager = new AudioManager();
-        this.scoreManager = new ScoreManager();
+        this.scoreManager = new ScoreManager(this.carryOver);
+        this.targetReached = false;
+        this.levelFinished = false;
 
         this.factory = new BubbleFactory({
             grid: this.grid, state: this.state, config: this.config, colors: this.colors, audioManager: this.audioManager,
@@ -95,8 +105,8 @@ export class BubbleGame {
 
         this._subscriptions.push(stopAnimUnsub);
 
-        const gameOverUnsub = this.events.on('gameOver', () => {
-            this.gameOver.start()
+        const gameOverUnsub = this.events.on('gameOver', (result) => {
+            this.gameOver.start(result);
         });
 
         this._subscriptions.push(gameOverUnsub);
@@ -104,13 +114,20 @@ export class BubbleGame {
 
     updateScoreDisplay() {
         if (this.scoreElement) {
-            this.scoreElement.textContent = `Счёт: ${this.scoreManager.getCurrentDisplayScore()}`;
+            const target = getLevelTarget(this.level);
+            this.scoreElement.textContent =
+                `Уровень ${this.level} | Счёт: ${this.scoreManager.getCurrentDisplayScore()} / ${target}`;
         }
     }
 
     awardPointsForGroup(count) {
         // Очки сразу уходят в целевой счёт; отображаемый счёт догонит их в loop()
         const points = this.scoreManager.addGroup(count);
+
+        if (!this.targetReached && this.scoreManager.getScore() >= getLevelTarget(this.level)) {
+            this.targetReached = true;
+            this.showLevelBanner('Цель достигнута');
+        }
 
         // Мигание
         if (this.scoreElement) {
@@ -127,12 +144,21 @@ export class BubbleGame {
             cancelAnimationFrame(this.animationFrame);
         }
 
+        this.applyPendingLevel();
         this.reset();
         this.factory.create();
         this.grid.saveCoordinates();
         this.setupEventHandlers();
         this.lastTime = performance.now();
         this.loop(this.lastTime);
+    }
+
+    applyPendingLevel() {
+        if (this.pendingLevel === null) return;
+
+        this.level = this.pendingLevel;
+        this.carryOver = this.pendingCarry;
+        this.pendingLevel = null;
     }
 
     async initAudio() {
@@ -150,6 +176,11 @@ export class BubbleGame {
 
         if (this.animationFrame) {
             cancelAnimationFrame(this.animationFrame);
+        }
+
+        if (this.popTimer) {
+            clearInterval(this.popTimer);
+            this.popTimer = null;
         }
 
         // Отписываемся от внутренних событий
@@ -181,14 +212,28 @@ export class BubbleGame {
 
         const {fallingBubbles, collapseBubbles} = this.collapse.calculate(checked);
 
-        const remaining = this.state.bubbles.filter((b) => b).length;
-        const isGameOver = remaining < 2 || !this.groups.hasGroups();
-
         this.playCollapseSounds(checked);
 
         const points = this.awardPointsForGroup(checked.length);
 
         this.showFloatingPoints(event.offsetX, event.offsetY, points);
+    }
+
+    showLevelBanner(text) {
+        const el = document.createElement('div');
+        el.className = 'floating-points';
+        el.textContent = text;
+        el.style.position = 'absolute';
+        el.style.left = '50%';
+        el.style.top = '40%';
+        el.style.transform = 'translate(-50%, -50%)';
+        el.style.color = '#FFF';
+        el.style.fontWeight = 'bold';
+        el.style.fontSize = '28px';
+        el.style.pointerEvents = 'none';
+        document.body.appendChild(el);
+
+        setTimeout(() => el.remove(), 1500);
     }
 
     playCollapseSounds(bubblesToPop) {
@@ -251,13 +296,57 @@ export class BubbleGame {
     }
 
     checkGameOver() {
+        if (this.levelFinished) return;
+
         if (!this.groups.hasGroups() && !this.state.hasTargets() && !this.state.exploding.size) {
-            this.dispatchGameOver();
+            this.finishLevel();
         }
     }
 
-    dispatchGameOver() {
-        this.events.emit('gameOver');
+    /**
+     * Конец уровня: GameOver считает итог (бонус, победа/поражение, перенос),
+     * здесь только сохраняем следующий уровень и показываем попап.
+     */
+    finishLevel() {
+        this.levelFinished = true;
+
+        const remaining = this.state.bubbles.filter((b) => b && !b.isDead).length;
+
+        const result = this.gameOver.resolve({
+            level: this.level,
+            remaining,
+            scoreManager: this.scoreManager,
+        });
+
+        // Текущий уровень и HUD не меняем до закрытия попапа
+        this.pendingLevel = result.nextLevel;
+        this.pendingCarry = result.carry;
+
+        this.events.emit('gameOver', result);
+
+        this.popRemainingBubbles();
+    }
+
+    /**
+     * Лопает оставшиеся пузыри по одному, пока показан попап.
+     * Бонус уже начислен в finishLevel — здесь только визуальный эффект.
+     * Не регистрируем взрыв в state.exploding, чтобы не запускать finishAnimation.
+     */
+    popRemainingBubbles() {
+        const queue = this.state.bubbles.filter((b) => b && !b.isDead && !b.isExploding);
+
+        this.popTimer = setInterval(() => {
+            const bubble = queue.shift();
+
+            if (!bubble) {
+                clearInterval(this.popTimer);
+                this.popTimer = null;
+                return;
+            }
+
+            bubble.startExplosion();
+            bubble.playSound();
+        }, POP_INTERVAL_MS);
     }
 
     loop(currentTime) {
