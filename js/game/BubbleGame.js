@@ -254,7 +254,7 @@ export class BubbleGame {
 
         const checked = this.state.bubbles.filter((b) => b && b.checked);
 
-        const {fallingBubbles, collapseBubbles} = this.collapse.calculate(checked);
+        this.collapse.calculate(checked);
 
         this.playCollapseSounds(checked);
 
@@ -277,7 +277,6 @@ export class BubbleGame {
         el.style.transform = 'translate(-50%, -50%)';
         el.style.color = '#FFF';
         el.style.fontWeight = 'bold';
-        el.style.fontSize = '28px';
         el.style.pointerEvents = 'none';
         document.body.appendChild(el);
 

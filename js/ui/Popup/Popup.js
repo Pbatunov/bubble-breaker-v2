@@ -60,9 +60,9 @@ export class Popup {
         this.popupButton = this.popupElement.querySelector('.js-popup-button');
         this.popupButton.textContent = this.buttonText ?? 'Сначала!';
         // Кнопка должна читаться при любом размере шрифта попапа
-        this.popupButton.style.fontSize = '0.7em';
+        this.popupButton.style.fontSize = '0.8em';
 
-        this.popupButton.addEventListener('click', (e) => {
+        this.popupButton.addEventListener('click', () => {
             if (this.onClose && typeof this.onClose === 'function') {
                 this.onClose();
             }
@@ -83,8 +83,8 @@ export class Popup {
         el.style.left = `${rect.left + rect.width / 2 + window.scrollX}px`;
         el.style.top = `${rect.top + rect.height / 2 + window.scrollY}px`;
 
-        const minFontSize = 12;
-        let fontSize = rect.width * 0.04;
+        const minFontSize = 13;
+        let fontSize = rect.width * 0.05;
         el.style.fontSize = `${fontSize}px`;
 
         while (el.scrollHeight > el.clientHeight && fontSize > minFontSize) {
